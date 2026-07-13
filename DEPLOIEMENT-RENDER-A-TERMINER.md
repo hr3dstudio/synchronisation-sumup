@@ -22,15 +22,17 @@ npm run typecheck
 npm run build
 ```
 
-## Blocage
+## Etat authentification
 
-`render login` a ete lance, mais aucune session Render n'a ete enregistree :
+Render CLI est connecte :
 
 ```text
-Error: run `render login` to authenticate
+Aurelien's workspace
 ```
 
-Il faut connecter un compte Render ou fournir `RENDER_API_KEY` dans l'environnement.
+GitHub CLI n'est pas encore connecte. `gh auth login` a ete lance, mais aucune session GitHub n'a ete enregistree.
+
+Render ne peut pas creer le service depuis ce poste tant qu'il n'a pas un repo GitHub/GitLab/Bitbucket accessible ou une image Docker deja publiee.
 
 ## Chemin le plus simple
 
@@ -66,4 +68,17 @@ puis deployer la configuration Shopify :
 
 ```bash
 shopify app deploy --client-id bc595165ca79ed5d8bc150dfec245857
+```
+
+## Commandes a relancer apres connexion GitHub
+
+```bash
+gh auth login --hostname github.com --web --git-protocol https
+gh repo create synchronisation-sumup --private --source . --remote origin --push
+```
+
+Ensuite, dans Render :
+
+```bash
+render services create --name sumup-shopify-sync --type web_service --repo https://github.com/VOTRE-COMPTE/synchronisation-sumup --runtime docker --plan free --health-check-path /health -o json
 ```
