@@ -2,7 +2,7 @@
 
 client_id = "bc595165ca79ed5d8bc150dfec245857"
 name = "synchronisation-sumup"
-application_url = "https://example.com"
+application_url = "https://sumup-shopify-sync.onrender.com"
 embedded = true
 
 [build]
@@ -20,4 +20,4 @@ api_version = "2026-10"
 scopes = "read_products,read_inventory,write_inventory,read_locations"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://sumup-shopify-sync.onrender.com/api/auth" ]
