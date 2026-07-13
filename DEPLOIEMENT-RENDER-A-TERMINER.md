@@ -1,6 +1,6 @@
 # Deploiement Render a terminer
 
-Le projet est pret pour Render. Le repo GitHub est cree et Render est connecte, mais Render demande une methode de paiement pour creer PostgreSQL et le cron.
+Le projet est pret pour Render. Le repo GitHub est cree et Render est connecte. Comme aucune carte bancaire ne doit etre ajoutee, la configuration Render ne cree plus ni PostgreSQL Render ni cron Render.
 
 ## Etat pret
 
@@ -8,7 +8,7 @@ Le projet est pret pour Render. Le repo GitHub est cree et Render est connecte, 
 - Archive prete : `outputs/synchronisation-sumup-render-ready.zip`
 - Backend Docker : `Dockerfile`
 - Blueprint Render : `render.yaml`
-- Base Render : PostgreSQL via `DATABASE_URL`
+- Base : PostgreSQL externe via `DATABASE_URL`
 - Migration Prisma : `prisma/migrations/20260713170000_init_postgresql/migration.sql`
 - Route sante : `/health`
 - Route CRON protegee : `/api/cron/sumup-sync`
@@ -50,7 +50,7 @@ Le Blueprint Render a ete teste avec :
 render blueprints validate render.yaml -o json
 ```
 
-Render refuse actuellement la base PostgreSQL et le cron car le workspace n'a pas d'information de paiement :
+Render refusait la base PostgreSQL et le cron car le workspace n'a pas d'information de paiement :
 
 ```json
 {
@@ -62,28 +62,28 @@ Render refuse actuellement la base PostgreSQL et le cron car le workspace n'a pa
 }
 ```
 
-Action requise dans Render : ajouter une methode de paiement au workspace. Ensuite le Blueprint pourra creer :
+Decision : ne pas ajouter de methode de paiement. Le projet utilise maintenant :
 
-- la base PostgreSQL ;
-- le backend web ;
-- la tache cron SumUp.
+- Render pour le backend web uniquement ;
+- une base PostgreSQL externe gratuite ;
+- GitHub Actions pour le cron SumUp.
 
-## Chemin le plus simple apres ajout du paiement Render
+## Chemin sans carte bancaire
 
 1. Aller sur Render.
-2. Ajouter une methode de paiement au workspace.
-3. New + Blueprint.
-4. Selectionner le repo GitHub `https://github.com/hr3dstudio/synchronisation-sumup`.
-5. Render lit `render.yaml` et cree :
+2. New + Blueprint.
+3. Selectionner le repo GitHub `https://github.com/hr3dstudio/synchronisation-sumup`.
+4. Render lit `render.yaml` et cree uniquement :
    - le service web `sumup-shopify-sync` ;
-   - la base PostgreSQL `sumup-shopify-sync-db` ;
-   - le cron `sumup-shopify-sync-cron`.
-6. Remplir les variables `sync: false` dans Render :
+5. Remplir les variables `sync: false` dans Render :
    - `SHOPIFY_API_KEY`
    - `SHOPIFY_API_SECRET`
    - `SHOPIFY_APP_URL`
+   - `DATABASE_URL`
    - `SUMUP_API_KEY`
    - `SUMUP_MERCHANT_CODE`
+   - `CRON_SECRET`
+   - `ENCRYPTION_KEY`
 
 Quand Render fournit l'URL publique, par exemple :
 
@@ -104,7 +104,7 @@ puis deployer la configuration Shopify :
 shopify app deploy --client-id bc595165ca79ed5d8bc150dfec245857
 ```
 
-## Commandes a relancer apres ajout du paiement Render
+## Commandes a relancer
 
 ```bash
 render blueprints validate render.yaml -o json

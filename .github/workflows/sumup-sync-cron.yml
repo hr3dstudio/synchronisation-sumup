@@ -1,0 +1,21 @@
+name: SumUp inventory sync
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  call-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call protected SumUp sync endpoint
+        env:
+          SHOPIFY_APP_URL: ${{ secrets.SHOPIFY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$SHOPIFY_APP_URL"
+          test -n "$CRON_SECRET"
+          curl -fsS \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SHOPIFY_APP_URL/api/cron/sumup-sync"
