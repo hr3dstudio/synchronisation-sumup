@@ -17,7 +17,7 @@ api_version = "2026-10"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products,read_inventory,write_inventory,read_locations"
+scopes = "read_products,write_products,read_inventory,write_inventory,read_locations"
 
 [auth]
 redirect_urls = [ "https://sumup-shopify-sync.onrender.com/api/auth" ]
