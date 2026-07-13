@@ -1,10 +1,10 @@
 # Deploiement Render a terminer
 
-Le projet est pret pour Render, mais le deploiement ne peut pas etre cree depuis cette session sans authentification Render/GitHub.
+Le projet est pret pour Render. Le repo GitHub est cree et Render est connecte, mais Render demande une methode de paiement pour creer PostgreSQL et le cron.
 
 ## Etat pret
 
-- Commit local : `9a10ccb`
+- Commit local : `4a5469b`
 - Archive prete : `outputs/synchronisation-sumup-render-ready.zip`
 - Backend Docker : `Dockerfile`
 - Blueprint Render : `render.yaml`
@@ -30,16 +30,50 @@ Render CLI est connecte :
 Aurelien's workspace
 ```
 
-GitHub CLI n'est pas encore connecte. `gh auth login` a ete lance, mais aucune session GitHub n'a ete enregistree.
+GitHub est maintenant connecte et le repo prive a ete cree :
 
-Render ne peut pas creer le service depuis ce poste tant qu'il n'a pas un repo GitHub/GitLab/Bitbucket accessible ou une image Docker deja publiee.
+```text
+https://github.com/hr3dstudio/synchronisation-sumup
+```
 
-## Chemin le plus simple
+Le code a ete pousse sur la branche `main`.
 
-1. Creer un repo GitHub avec le contenu de `outputs/synchronisation-sumup`.
-2. Aller sur Render.
+Render CLI est connecte au workspace :
+
+```text
+Aurelien's workspace
+```
+
+Le Blueprint Render a ete teste avec :
+
+```bash
+render blueprints validate render.yaml -o json
+```
+
+Render refuse actuellement la base PostgreSQL et le cron car le workspace n'a pas d'information de paiement :
+
+```json
+{
+  "errors": [
+    { "error": "need_payment_info", "path": "databases[0]" },
+    { "error": "need_payment_info", "path": "services[1]" }
+  ],
+  "valid": false
+}
+```
+
+Action requise dans Render : ajouter une methode de paiement au workspace. Ensuite le Blueprint pourra creer :
+
+- la base PostgreSQL ;
+- le backend web ;
+- la tache cron SumUp.
+
+## Chemin le plus simple apres ajout du paiement Render
+
+1. Aller sur Render.
+2. Ajouter une methode de paiement au workspace.
 3. New + Blueprint.
-4. Selectionner le repo GitHub.
+4. Selectionner le repo GitHub `https://github.com/hr3dstudio/synchronisation-sumup`.
 5. Render lit `render.yaml` et cree :
    - le service web `sumup-shopify-sync` ;
    - la base PostgreSQL `sumup-shopify-sync-db` ;
@@ -70,15 +104,14 @@ puis deployer la configuration Shopify :
 shopify app deploy --client-id bc595165ca79ed5d8bc150dfec245857
 ```
 
-## Commandes a relancer apres connexion GitHub
+## Commandes a relancer apres ajout du paiement Render
 
 ```bash
-gh auth login --hostname github.com --web --git-protocol https
-gh repo create synchronisation-sumup --private --source . --remote origin --push
+render blueprints validate render.yaml -o json
 ```
 
-Ensuite, dans Render :
+Puis creer le Blueprint depuis le Dashboard Render en selectionnant le repo :
 
-```bash
-render services create --name sumup-shopify-sync --type web_service --repo https://github.com/VOTRE-COMPTE/synchronisation-sumup --runtime docker --plan free --health-check-path /health -o json
+```text
+https://github.com/hr3dstudio/synchronisation-sumup
 ```
