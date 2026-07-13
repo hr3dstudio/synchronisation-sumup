@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  shop      String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shop, key])
+}
+
+model ShopifyProduct {
+  id        String   @id @default(cuid())
+  shop      String
+  productId String
+  title     String
+  handle    String?
+  status    String?
+  variants  ShopifyVariant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shop, productId])
+}
+
+model ShopifyVariant {
+  id              String   @id @default(cuid())
+  shop            String
+  productId       String
+  variantId       String
+  inventoryItemId String?
+  sku             String?
+  barcode         String?
+  title           String
+  fingerprint     String
+  product         ShopifyProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  mappings        ProductMapping[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, variantId])
+  @@index([shop, fingerprint])
+}
+
+model ProductMapping {
+  id               String   @id @default(cuid())
+  shop             String
+  sumupProductId   String?
+  sumupSku         String?
+  sumupName        String
+  sumupFingerprint String
+  shopifyVariantId String
+  variant          ShopifyVariant @relation(fields: [shopifyVariantId], references: [id])
+  enabled          Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([shop, sumupFingerprint])
+  @@index([shop, enabled])
+}
+
+model SumupTransaction {
+  id                 String   @id @default(cuid())
+  shop               String
+  sumupTransactionId String
+  transactionCode    String?
+  type               String
+  status             String
+  amount             Decimal  @db.Decimal(12, 2)
+  currency           String
+  raw                Json
+  occurredAt         DateTime
+  processedAt        DateTime?
+  items              SumupTransactionItem[]
+  adjustments        StockAdjustment[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([shop, sumupTransactionId])
+}
+
+model SumupTransactionItem {
+  id                String   @id @default(cuid())
+  shop              String
+  transactionId     String
+  sumupLineId       String
+  sumupProductId    String?
+  name              String
+  sku               String?
+  quantity          Int
+  fingerprint       String
+  raw               Json
+  transaction       SumupTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  adjustments       StockAdjustment[]
+  createdAt         DateTime @default(now())
+
+  @@unique([shop, sumupLineId])
+  @@index([shop, fingerprint])
+}
+
+model StockAdjustment {
+  id                    String   @id @default(cuid())
+  shop                  String
+  idempotencyKey        String
+  transactionId         String
+  transactionItemId     String
+  shopifyInventoryItemId String?
+  shopifyLocationId     String?
+  quantityDelta         Int
+  dryRun                Boolean  @default(true)
+  graphqlRequest        Json?
+  graphqlResponse       Json?
+  status                String
+  transaction           SumupTransaction @relation(fields: [transactionId], references: [id])
+  item                  SumupTransactionItem @relation(fields: [transactionItemId], references: [id])
+  createdAt             DateTime @default(now())
+
+  @@unique([shop, idempotencyKey])
+}
+
+model SyncRun {
+  id              String   @id @default(cuid())
+  shop            String
+  source          String
+  status          String
+  dryRun          Boolean
+  startedAt       DateTime @default(now())
+  finishedAt      DateTime?
+  scannedCount    Int      @default(0)
+  adjustedCount   Int      @default(0)
+  interventionCount Int    @default(0)
+  error           String?  @db.Text
+  logs            SyncLog[]
+}
+
+model SyncLog {
+  id        String   @id @default(cuid())
+  shop      String
+  runId     String?
+  level     String
+  message   String   @db.Text
+  context   Json?
+  run       SyncRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([shop, createdAt])
+}
+
+model SynchronizationLock {
+  id        String   @id @default(cuid())
+  shop      String
+  name      String
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([shop, name])
+}
+
+model ManualIntervention {
+  id          String   @id @default(cuid())
+  shop        String
+  type        String
+  status      String   @default("OPEN")
+  title       String
+  description String   @db.Text
+  payload     Json
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shop, status])
+}

@@ -1,0 +1,24 @@
+name = "Synchronisation SumUp"
+client_id = ""
+application_url = "https://votre-app-node.example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = false
+
+[access_scopes]
+scopes = "read_products,read_inventory,write_inventory,read_locations"
+
+[auth]
+redirect_urls = [
+  "https://votre-app-node.example.com/auth/callback",
+  "https://votre-app-node.example.com/auth/shopify/callback",
+  "https://votre-app-node.example.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2026-07"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/api/webhooks"
