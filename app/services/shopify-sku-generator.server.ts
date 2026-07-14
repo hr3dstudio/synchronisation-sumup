@@ -25,6 +25,41 @@ type ProductPage = {
   };
 };
 
+type ShopifyCollectionNode = {
+  id: string;
+  title: string;
+  handle?: string | null;
+};
+
+type CollectionPage = {
+  nodes: ShopifyCollectionNode[];
+  pageInfo: {
+    hasNextPage: boolean;
+    endCursor?: string | null;
+  };
+};
+
+export type SkuGenerationCatalog = {
+  products: Array<{
+    id: string;
+    title: string;
+    variants: Array<{
+      id: string;
+      title: string;
+      sku?: string | null;
+    }>;
+  }>;
+  collections: Array<{
+    id: string;
+    title: string;
+  }>;
+};
+
+export type SkuGenerationSelection =
+  | { mode: "all" }
+  | { mode: "collection"; collectionId: string }
+  | { mode: "products"; productIds: string[] };
+
 export type GeneratedSkuSummary = {
   productsScanned: number;
   variantsScanned: number;
@@ -88,6 +123,119 @@ async function fetchProductPage(
   return json.data.products;
 }
 
+async function fetchCollectionProductPage(
+  admin: AdminGraphqlClient,
+  collectionId: string,
+  after?: string | null,
+): Promise<ProductPage> {
+  const response = await admin.graphql(
+    `#graphql
+    query collectionProductsForSkuGeneration($collectionId: ID!, $after: String) {
+      collection(id: $collectionId) {
+        products(first: 100, after: $after) {
+          nodes {
+            id
+            title
+            handle
+            status
+            variants(first: 100) {
+              nodes {
+                id
+                title
+                sku
+                inventoryItem { id }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }`,
+    { variables: { collectionId, after } },
+  );
+  const json = await response.json();
+  const errors = json?.errors;
+  if (errors?.length) {
+    throw new Error(errors.map((error: { message: string }) => error.message).join(", "));
+  }
+  return json.data.collection?.products ?? {
+    nodes: [],
+    pageInfo: { hasNextPage: false, endCursor: null },
+  };
+}
+
+async function fetchCollectionPage(
+  admin: AdminGraphqlClient,
+  after?: string | null,
+): Promise<CollectionPage> {
+  const response = await admin.graphql(
+    `#graphql
+    query collectionsForSkuGeneration($after: String) {
+      collections(first: 100, after: $after) {
+        nodes {
+          id
+          title
+          handle
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }`,
+    { variables: { after } },
+  );
+  const json = await response.json();
+  const errors = json?.errors;
+  if (errors?.length) {
+    throw new Error(errors.map((error: { message: string }) => error.message).join(", "));
+  }
+  return json.data.collections;
+}
+
+export async function fetchSkuGenerationCatalog(
+  admin: AdminGraphqlClient,
+): Promise<SkuGenerationCatalog> {
+  const products: SkuGenerationCatalog["products"] = [];
+  const collections: SkuGenerationCatalog["collections"] = [];
+
+  let productCursor: string | null | undefined;
+  do {
+    const page = await fetchProductPage(admin, productCursor);
+    products.push(
+      ...page.nodes.map((product) => ({
+        id: product.id,
+        title: product.title,
+        variants: product.variants.nodes.map((variant) => ({
+          id: variant.id,
+          title: variant.title,
+          sku: variant.sku,
+        })),
+      })),
+    );
+    productCursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+  } while (productCursor);
+
+  let collectionCursor: string | null | undefined;
+  do {
+    const page = await fetchCollectionPage(admin, collectionCursor);
+    collections.push(
+      ...page.nodes.map((collection) => ({
+        id: collection.id,
+        title: collection.title,
+      })),
+    );
+    collectionCursor = page.pageInfo.hasNextPage
+      ? page.pageInfo.endCursor
+      : null;
+  } while (collectionCursor);
+
+  return { products, collections };
+}
+
 async function updateVariantSku(
   shop: string,
   accessToken: string,
@@ -144,6 +292,7 @@ export async function generateMissingShopifySkus(input: {
   shop: string;
   accessToken: string;
   admin: AdminGraphqlClient;
+  selection?: SkuGenerationSelection;
 }): Promise<GeneratedSkuSummary> {
   const summary: GeneratedSkuSummary = {
     productsScanned: 0,
@@ -153,10 +302,25 @@ export async function generateMissingShopifySkus(input: {
     errors: [],
   };
 
+  const selectedProductIds =
+    input.selection?.mode === "products"
+      ? new Set(input.selection.productIds)
+      : null;
+
   let after: string | null | undefined;
   do {
-    const page = await fetchProductPage(input.admin, after);
-    for (const product of page.nodes) {
+    const page =
+      input.selection?.mode === "collection"
+        ? await fetchCollectionProductPage(
+            input.admin,
+            input.selection.collectionId,
+            after,
+          )
+        : await fetchProductPage(input.admin, after);
+
+    for (const product of page.nodes.filter(
+      (node) => !selectedProductIds || selectedProductIds.has(node.id),
+    )) {
       summary.productsScanned++;
       const dbProduct = await upsertLocalProduct(input.shop, product);
 
