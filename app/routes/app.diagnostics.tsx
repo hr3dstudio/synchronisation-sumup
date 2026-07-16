@@ -1,4 +1,5 @@
 import { useLoaderData } from "react-router";
+import { isDryRunEnabled } from "../utils/env.server";
 
 type DiagnosticsData = {
   nodeEnv?: string;
@@ -12,7 +13,7 @@ export const loader = async (): Promise<DiagnosticsData> =>
     nodeEnv: process.env.NODE_ENV,
     hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
     hasSumupKey: Boolean(process.env.SUMUP_API_KEY),
-    dryRun: process.env.DRY_RUN !== "false",
+    dryRun: isDryRunEnabled(),
   });
 
 export default function Diagnostics() {

@@ -5,6 +5,7 @@ import { fetchPrimaryLocationId } from "./shopify-products.server";
 import { createIdempotencyKey, isRefund, stockDelta } from "./sync-rules.server";
 import { SumupClient, type SumupTransactionDto } from "./sumup-client.server";
 import { withSynchronizationLock } from "./synchronization-lock.server";
+import { isDryRunEnabled } from "../utils/env.server";
 
 export type SyncOptions = {
   shop: string;
@@ -16,7 +17,7 @@ export type SyncOptions = {
 };
 
 export async function synchronizeInventory(options: SyncOptions) {
-  const dryRun = options.dryRun ?? process.env.DRY_RUN !== "false";
+  const dryRun = options.dryRun ?? isDryRunEnabled();
   const lookbackMinutes = options.lookbackMinutes ?? Number(process.env.SYNC_LOOKBACK_MINUTES ?? 15);
   const autoRestockFullRefunds = process.env.AUTO_RESTOCK_FULL_REFUNDS === "true";
 
