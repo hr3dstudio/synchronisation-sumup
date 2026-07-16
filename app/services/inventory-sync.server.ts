@@ -137,21 +137,33 @@ export async function synchronizeInventory(options: SyncOptions) {
           if (delta === 0) continue;
 
           const idempotencyKey = createIdempotencyKey(transaction.id, item.id, delta);
-          const adjustment = await prisma.stockAdjustment.create({
-            data: {
-              shop: options.shop,
-              idempotencyKey,
-              transactionId: savedTransaction.id,
-              transactionItemId: savedItem.id,
-              shopifyInventoryItemId: inventoryItemId,
-              shopifyLocationId: locationId,
-              quantityDelta: delta,
-              dryRun,
-              status: dryRun ? "DRY_RUN" : "PENDING",
-            },
-          }).catch(() => null);
+          const adjustment = await prisma.stockAdjustment
+            .create({
+              data: {
+                shop: options.shop,
+                idempotencyKey,
+                transactionId: savedTransaction.id,
+                transactionItemId: savedItem.id,
+                shopifyInventoryItemId: inventoryItemId,
+                shopifyLocationId: locationId,
+                quantityDelta: delta,
+                dryRun,
+                status: dryRun ? "DRY_RUN" : "PENDING",
+              },
+            })
+            .catch(() =>
+              prisma.stockAdjustment.findUnique({
+                where: {
+                  shop_idempotencyKey: {
+                    shop: options.shop,
+                    idempotencyKey,
+                  },
+                },
+              }),
+            );
 
           if (!adjustment) continue;
+          if (adjustment.status === "APPLIED") continue;
 
           if (!dryRun) {
             const graphqlResponse = await adjustInventory(options.admin, {
@@ -161,7 +173,7 @@ export async function synchronizeInventory(options: SyncOptions) {
             });
             await prisma.stockAdjustment.update({
               where: { id: adjustment.id },
-              data: { status: "APPLIED", graphqlResponse },
+              data: { dryRun: false, status: "APPLIED", graphqlResponse },
             });
           }
 
