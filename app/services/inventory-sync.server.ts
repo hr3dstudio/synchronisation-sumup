@@ -42,10 +42,12 @@ export async function synchronizeInventory(options: SyncOptions) {
           sku: true,
           barcode: true,
           title: true,
+          product: { select: { title: true } },
         },
       }).then((variants) =>
         variants.map((variant) => ({
           ...variant,
+          productTitle: variant.product.title,
           shopifyVariantId: variant.id,
         })),
       );

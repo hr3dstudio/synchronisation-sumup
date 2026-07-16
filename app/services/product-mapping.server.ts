@@ -31,6 +31,7 @@ export type MappingCandidate = {
   fingerprint: string;
   sku?: string | null;
   barcode?: string | null;
+  productTitle?: string | null;
   title: string;
 };
 
@@ -41,6 +42,7 @@ export function findBestMapping(
   const fingerprint = productFingerprint(item);
   const normalizedSku = normalize(item.sku);
   const normalizedBarcode = normalize(item.barcode);
+  const normalizedName = normalize(item.name);
 
   return (
     candidates.find((candidate) => candidate.fingerprint === fingerprint) ??
@@ -49,6 +51,18 @@ export function findBestMapping(
       : null) ??
     (normalizedBarcode
       ? candidates.find((candidate) => normalize(candidate.barcode) === normalizedBarcode)
+      : null) ??
+    (normalizedName
+      ? candidates.find((candidate) => {
+          const productTitle = normalize(candidate.productTitle);
+          const variantTitle = normalize(candidate.title);
+          const combinedTitle =
+            productTitle && variantTitle && variantTitle !== "default title"
+              ? `${productTitle} ${variantTitle}`
+              : productTitle;
+
+          return normalizedName === productTitle || normalizedName === combinedTitle;
+        })
       : null) ??
     null
   );
