@@ -19,6 +19,24 @@ describe("inventory sync rules", () => {
     expect(isRefund({ type: "PAYMENT", amount: -10 })).toBe(true);
   });
 
+  it("detecte les paiements entierement rembourses par evenement SumUp", () => {
+    expect(
+      isRefund({
+        type: "PAYMENT",
+        amount: 4,
+        raw: {
+          transaction_events: [
+            {
+              event_type: "REFUND",
+              status: "REFUNDED",
+              amount: 4,
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
   it("cree une cle d'idempotence par transaction, ligne et delta", () => {
     expect(createIdempotencyKey("tx", "line", -1)).toBe("tx:line:-1");
   });

@@ -173,7 +173,14 @@ export async function synchronizeInventory(options: SyncOptions) {
             });
             await prisma.stockAdjustment.update({
               where: { id: adjustment.id },
-              data: { dryRun: false, status: "APPLIED", graphqlResponse },
+              data: {
+                shopifyInventoryItemId: inventoryItemId,
+                shopifyLocationId: locationId,
+                quantityDelta: delta,
+                dryRun: false,
+                status: "APPLIED",
+                graphqlResponse,
+              },
             });
           }
 

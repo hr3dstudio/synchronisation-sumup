@@ -58,4 +58,32 @@ describe("findBestMapping", () => {
 
     expect(match?.shopifyVariantId).toBe("variant-bracelet");
   });
+
+  it("prefers exact Shopify title over an older matching fingerprint", () => {
+    const match = findBestMapping(
+      { name: "BRACELET DE PROTECTION CITRONELLE 5-7 JOURS" },
+      [
+        {
+          shopifyVariantId: "variant-old",
+          inventoryItemId: "inventory-old",
+          fingerprint: "bracelet de protection citronelle 5 7 jours",
+          sku: "MP-GEL-DOUCHE-650ML-P-52194638",
+          barcode: null,
+          productTitle: "GEL DOUCHE 650ML",
+          title: "LUXE NOIR AU GINSENG",
+        },
+        {
+          shopifyVariantId: "variant-bracelet",
+          inventoryItemId: "inventory-bracelet",
+          fingerprint: "default title",
+          sku: "MP-BRACELET-DE-PROTEC-76089422",
+          barcode: null,
+          productTitle: "BRACELET DE PROTECTION CITRONELLE 5-7 JOURS",
+          title: "Default Title",
+        },
+      ],
+    );
+
+    expect(match?.shopifyVariantId).toBe("variant-bracelet");
+  });
 });

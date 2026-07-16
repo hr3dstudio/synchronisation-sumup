@@ -45,7 +45,6 @@ export function findBestMapping(
   const normalizedName = normalize(item.name);
 
   return (
-    candidates.find((candidate) => candidate.fingerprint === fingerprint) ??
     (normalizedSku
       ? candidates.find((candidate) => normalize(candidate.sku) === normalizedSku)
       : null) ??
@@ -64,6 +63,7 @@ export function findBestMapping(
           return normalizedName === productTitle || normalizedName === combinedTitle;
         })
       : null) ??
+    candidates.find((candidate) => candidate.fingerprint === fingerprint) ??
     null
   );
 }
