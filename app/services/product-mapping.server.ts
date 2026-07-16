@@ -39,12 +39,17 @@ export function findBestMapping(
   candidates: MappingCandidate[],
 ) {
   const fingerprint = productFingerprint(item);
+  const normalizedSku = normalize(item.sku);
+  const normalizedBarcode = normalize(item.barcode);
+
   return (
     candidates.find((candidate) => candidate.fingerprint === fingerprint) ??
-    candidates.find((candidate) => normalize(candidate.sku) === normalize(item.sku)) ??
-    candidates.find(
-      (candidate) => normalize(candidate.barcode) === normalize(item.barcode),
-    ) ??
+    (normalizedSku
+      ? candidates.find((candidate) => normalize(candidate.sku) === normalizedSku)
+      : null) ??
+    (normalizedBarcode
+      ? candidates.find((candidate) => normalize(candidate.barcode) === normalizedBarcode)
+      : null) ??
     null
   );
 }
