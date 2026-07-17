@@ -25,8 +25,14 @@ function refundedAmount(raw: unknown) {
   }, 0);
 }
 
-export function isRefund(transaction: Pick<SumupTransactionDto, "type" | "amount" | "raw">) {
-  if (transaction.type.toLowerCase().includes("refund") || transaction.amount < 0) {
+export function isRefund(
+  transaction: Pick<SumupTransactionDto, "type" | "status" | "amount" | "raw">,
+) {
+  if (
+    transaction.type.toLowerCase().includes("refund") ||
+    transaction.status.toLowerCase().includes("refund") ||
+    transaction.amount < 0
+  ) {
     return true;
   }
 

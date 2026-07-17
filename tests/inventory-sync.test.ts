@@ -15,14 +15,16 @@ describe("inventory sync rules", () => {
   });
 
   it("detecte les remboursements par type ou montant", () => {
-    expect(isRefund({ type: "REFUND", amount: 10 })).toBe(true);
-    expect(isRefund({ type: "PAYMENT", amount: -10 })).toBe(true);
+    expect(isRefund({ type: "REFUND", status: "SUCCESSFUL", amount: 10 })).toBe(true);
+    expect(isRefund({ type: "PAYMENT", status: "SUCCESSFUL", amount: -10 })).toBe(true);
+    expect(isRefund({ type: "PAYMENT", status: "REFUNDED", amount: 10 })).toBe(true);
   });
 
   it("detecte les paiements entierement rembourses par evenement SumUp", () => {
     expect(
       isRefund({
         type: "PAYMENT",
+        status: "SUCCESSFUL",
         amount: 4,
         raw: {
           transaction_events: [
