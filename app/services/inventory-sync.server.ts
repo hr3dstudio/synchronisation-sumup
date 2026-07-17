@@ -16,6 +16,28 @@ export type SyncOptions = {
   transactions?: SumupTransactionDto[];
 };
 
+async function createOpenManualInterventionOnce(data: {
+  shop: string;
+  type: string;
+  title: string;
+  description: string;
+  payload: object;
+}) {
+  const existing = await prisma.manualIntervention.findFirst({
+    where: {
+      shop: data.shop,
+      type: data.type,
+      title: data.title,
+      status: "OPEN",
+    },
+    select: { id: true },
+  });
+  if (existing) return false;
+
+  await prisma.manualIntervention.create({ data });
+  return true;
+}
+
 export async function synchronizeInventory(options: SyncOptions) {
   const dryRun = options.dryRun ?? isDryRunEnabled();
   const lookbackMinutes = options.lookbackMinutes ?? Number(process.env.SYNC_LOOKBACK_MINUTES ?? 15);
@@ -75,16 +97,14 @@ export async function synchronizeInventory(options: SyncOptions) {
         });
 
         if (!transaction.items?.length) {
-          interventionCount++;
-          await prisma.manualIntervention.create({
-            data: {
+          const created = await createOpenManualInterventionOnce({
               shop: options.shop,
               type: "SUMUP_TRANSACTION_WITHOUT_ITEMS",
               title: `Transaction SumUp sans detail produit ${transaction.id}`,
               description: "La transaction ne contient pas de lignes produit exploitables.",
               payload: transaction as object,
-            },
           });
+          if (created) interventionCount++;
           continue;
         }
 
@@ -120,16 +140,15 @@ export async function synchronizeInventory(options: SyncOptions) {
           const inventoryItemId = mapped?.variant.inventoryItemId ?? fallback?.inventoryItemId;
 
           if (!inventoryItemId || !locationId) {
-            interventionCount++;
-            await prisma.manualIntervention.create({
-              data: {
+            const title = `Correspondance manquante pour ${item.name} (${item.id})`;
+            const created = await createOpenManualInterventionOnce({
                 shop: options.shop,
                 type: "MISSING_PRODUCT_MAPPING",
-                title: `Correspondance manquante pour ${item.name}`,
+                title,
                 description: "Associez cette ligne SumUp a une variante Shopify avant synchronisation.",
                 payload: { transaction, item } as object,
-              },
             });
+            if (created) interventionCount++;
             continue;
           }
 
